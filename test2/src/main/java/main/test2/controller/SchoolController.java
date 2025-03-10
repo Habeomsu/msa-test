@@ -1,11 +1,9 @@
 package main.test2.controller;
 
 import main.test2.dto.SchoolRequestDto;
+import main.test2.dto.SchoolResponseDto;
 import main.test2.service.SchoolService;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/school")
@@ -22,4 +20,11 @@ public class SchoolController {
         schoolService.save(schoolDto);
         return "success";
     }
+
+    @GetMapping("/{id}")
+    public SchoolResponseDto.SchoolDto getSchoolById(@PathVariable("id") Long id){
+
+        return schoolService.findById(id);
+    }
+
 }

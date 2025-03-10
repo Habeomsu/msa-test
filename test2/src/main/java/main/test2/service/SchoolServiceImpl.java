@@ -1,9 +1,12 @@
 package main.test2.service;
 
 import main.test2.dto.SchoolRequestDto;
+import main.test2.dto.SchoolResponseDto;
 import main.test2.entity.School;
 import main.test2.repository.SchoolRepository;
 import org.springframework.stereotype.Service;
+
+import java.util.Optional;
 
 @Service
 public class SchoolServiceImpl implements SchoolService {
@@ -23,5 +26,16 @@ public class SchoolServiceImpl implements SchoolService {
                 .build();
 
         schoolRepository.save(school);
+    }
+
+    @Override
+    public SchoolResponseDto.SchoolDto findById(Long id) {
+        Optional<School> school = schoolRepository.findById(id);
+        SchoolResponseDto.SchoolDto schoolDto = SchoolResponseDto.SchoolDto.builder()
+                .id(school.get().getId())
+                .name(school.get().getName())
+                .email(school.get().getEmail())
+                .build();
+        return schoolDto;
     }
 }
