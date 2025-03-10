@@ -27,7 +27,8 @@ public class StudentController {
     @GetMapping("/{id}")
     public StudentResponseDto.StudentDto getStudentById(@PathVariable Long id) {
 
-        return null;
+
+        return studentService.findById(id);
     }
 
 }

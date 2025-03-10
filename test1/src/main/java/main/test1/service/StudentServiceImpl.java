@@ -1,5 +1,7 @@
 package main.test1.service;
 
+import main.test1.client.SchoolFeignClient;
+import main.test1.dto.SchoolResponseDto;
 import main.test1.dto.StudentRequestDto;
 import main.test1.dto.StudentResponseDto;
 import main.test1.entity.Student;
@@ -10,9 +12,11 @@ import org.springframework.stereotype.Service;
 public class StudentServiceImpl implements StudentService {
 
     private final StudentRepository studentRepository;
+    private final SchoolFeignClient schoolFeignClient;
 
-    public StudentServiceImpl(StudentRepository studentRepository) {
+    public StudentServiceImpl(StudentRepository studentRepository, SchoolFeignClient schoolFeignClient) {
         this.studentRepository = studentRepository;
+        this.schoolFeignClient = schoolFeignClient;
     }
 
     @Override
@@ -25,5 +29,21 @@ public class StudentServiceImpl implements StudentService {
 
         studentRepository.save(student);
 
+    }
+
+    @Override
+    public StudentResponseDto.StudentDto findById(Long id) {
+        Student student = studentRepository.findById(id).orElse(null);
+        Long schoolId = student.getSchool_id();
+        SchoolResponseDto.School school = schoolFeignClient.getSchool(schoolId);
+        StudentResponseDto.StudentDto studentResponseDto = StudentResponseDto.StudentDto.builder()
+                .id(student.getId())
+                .name(student.getName())
+                .email(student.getEmail())
+                .school_name(school.getName())
+                .school_email(school.getEmail())
+                .build();
+
+        return studentResponseDto;
     }
 }
