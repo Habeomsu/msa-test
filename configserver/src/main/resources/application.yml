@@ -1,0 +1,21 @@
+spring:
+  application:
+    name: config-server
+
+  cloud:
+    config:
+      server:
+        git:
+          uri: git@github.com:Habeomsu/msa-v1-config.git
+
+          ignoreLocalSshSettings: true
+          private-key: |
+            -----BEGIN EC PRIVATE KEY-----
+            ${PRIVATE_KEY}
+            -----END EC PRIVATE KEY-----
+
+server:
+  port: 8071
+
+
+
