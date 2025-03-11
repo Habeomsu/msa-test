@@ -4,8 +4,44 @@ spring:
   config:
     import: optional:configserver:http://localhost:8071
 
+
 server:
   port: 8072
 
+## 액튜에이터 사용시 게이트웨이 엔드포인트 추가
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    gateway:
+      enabled: true
 
 
+## 깃허브 구성 서버에 등록
+#eureka:
+#  instance:
+#    prefer-ip-address: true
+#  client:
+#    register-with-eureka: true
+#    fetch-registry: true
+#    service-url:
+#      defaultZone: http://localhost:8761/eureka
+#
+#spring:
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: test1
+#          uri: lb://TEST1
+#          predicates:
+#            - Path=/test1/**
+#          filters:
+#            - RewritePath=/test1/(?<path>.*), /$\{path}
+#        - id: test2
+#          uri: lb://TEST2
+#          predicates:
+#            - Path=/test2/**
+#          filters:
+#            - RewritePath=/test2/(?<path>.*), /$\{path}
