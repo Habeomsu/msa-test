@@ -23,10 +23,12 @@ import java.util.Iterator;
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
+    private final JWTUtil jwtUtil;
 
 
-    public LoginFilter(AuthenticationManager authenticationManager) {
+    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil) {
         this.authenticationManager = authenticationManager;
+        this.jwtUtil = jwtUtil;
         setFilterProcessesUrl("/auth/login");
     }
 
@@ -72,9 +74,14 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
         String role = auth.getAuthority();
 
+        String access = jwtUtil.createJwt("access", username, role, 600000L);
+
+
         // 로그인 성공 시 응답 바디에 성공 메시지 추가
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/json");
+        response.setHeader("Authorization", "Bearer " + access);
+
 
         // 로그인 성공 메시지 객체
         String successMessage = "{\"message\": \"Login successful\", \"username\": \"" + username + "\"}";
