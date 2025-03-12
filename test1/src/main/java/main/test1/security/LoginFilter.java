@@ -3,10 +3,12 @@ package main.test1.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletInputStream;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import main.test1.dto.CustomUserDetails;
 import main.test1.dto.UserRequestDto;
+import main.test1.service.RedisService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -24,11 +26,14 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
     private final JWTUtil jwtUtil;
+    private final RedisService redisService;
 
 
-    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil) {
+    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil,
+                       RedisService redisService) {
         this.authenticationManager = authenticationManager;
         this.jwtUtil = jwtUtil;
+        this.redisService = redisService;
         setFilterProcessesUrl("/auth/login");
     }
 
@@ -75,12 +80,17 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         String role = auth.getAuthority();
 
         String access = jwtUtil.createJwt("access", username, role, 600000L);
+        String refresh = jwtUtil.createJwt("refresh", username, role, 86400000L);
 
 
         // 로그인 성공 시 응답 바디에 성공 메시지 추가
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/json");
         response.setHeader("Authorization", "Bearer " + access);
+        response.addCookie(createCookie("refresh", refresh));
+
+        // Redis에 사용자와 토큰 저장
+        redisService.saveRefreshToken(username, refresh);
 
 
         // 로그인 성공 메시지 객체
@@ -101,5 +111,15 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     }
 
+    private Cookie createCookie(String key, String value) {
+
+        Cookie cookie = new Cookie(key, value);
+        cookie.setMaxAge(24 * 60 * 60);
+        // cookie.setSecure(true);
+        // cookie.setPath("/");
+        cookie.setHttpOnly(true);
+
+        return cookie;
+    }
 
 }

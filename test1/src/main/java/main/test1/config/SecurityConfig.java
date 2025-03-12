@@ -3,6 +3,7 @@ package main.test1.config;
 import lombok.AllArgsConstructor;
 import main.test1.security.JWTUtil;
 import main.test1.security.LoginFilter;
+import main.test1.service.RedisService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -20,6 +21,7 @@ public class SecurityConfig {
 
     private final AuthenticationConfiguration authenticationConfiguration;
     private final JWTUtil jwtUtil;
+    private final RedisService redisService;
 
     @Bean
     public BCryptPasswordEncoder bCryptPasswordEncoder() {
@@ -51,7 +53,7 @@ public class SecurityConfig {
                 );
 
         http
-                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration),jwtUtil), UsernamePasswordAuthenticationFilter.class);
+                .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration),jwtUtil,redisService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
