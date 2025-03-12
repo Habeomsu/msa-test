@@ -19,4 +19,16 @@ public class UserRequestDto {
         private String email;
 
     }
+
+    @Getter
+    @AllArgsConstructor
+    @Builder
+    @NoArgsConstructor
+    public static class LoginDto{
+
+        private String username;
+        private String password;
+
+    }
+
 }
