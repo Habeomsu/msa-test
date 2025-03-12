@@ -1,6 +1,7 @@
 package main.test1.config;
 
 import lombok.AllArgsConstructor;
+import main.test1.security.CustomLogoutFilter;
 import main.test1.security.JWTUtil;
 import main.test1.security.LoginFilter;
 import main.test1.service.RedisService;
@@ -13,6 +14,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutFilter;
 
 @EnableWebSecurity
 @Configuration
@@ -55,6 +57,8 @@ public class SecurityConfig {
         http
                 .addFilterAt(new LoginFilter(authenticationManager(authenticationConfiguration),jwtUtil,redisService), UsernamePasswordAuthenticationFilter.class);
 
+        http
+                .addFilterBefore(new CustomLogoutFilter(jwtUtil,redisService), LogoutFilter.class);
         return http.build();
     }
 
