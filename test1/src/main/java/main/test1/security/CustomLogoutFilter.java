@@ -17,6 +17,7 @@ import jakarta.servlet.http.Cookie;
 
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.nio.charset.StandardCharsets;
 
 @Slf4j
 public class CustomLogoutFilter extends GenericFilterBean {
@@ -70,6 +71,7 @@ public class CustomLogoutFilter extends GenericFilterBean {
             // 상태 코드와 응답 메시지만 설정
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);  // 401 상태 코드 설정
             response.setContentType(MediaType.APPLICATION_JSON_VALUE); // JSON 응답 형식
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
 
             // 응답 바디에 메시지 추가
             response.getWriter().write("{\"message\": \"Refresh token not found\"}");
@@ -82,16 +84,19 @@ public class CustomLogoutFilter extends GenericFilterBean {
         } catch (ExpiredJwtException e) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);  // 401 상태 코드 설정
             response.setContentType(MediaType.APPLICATION_JSON_VALUE); // JSON 응답 형식
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.getWriter().write("{\"message\": \"Refresh token expired\"}");  // 응답 메시지
             return;
         } catch (SignatureException e) { // 서명 오류 처리
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);  // 401 상태 코드 설정
             response.setContentType(MediaType.APPLICATION_JSON_VALUE); // JSON 응답 형식
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.getWriter().write("{\"message\": \"Invalid refresh token signature\"}");  // 응답 메시지
             return;
         } catch (JwtException e) { // 기타 JWT 관련 오류 처리
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);  // 401 상태 코드 설정
             response.setContentType(MediaType.APPLICATION_JSON_VALUE); // JSON 응답 형식
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             response.getWriter().write("{\"message\": \"Invalid refresh token\"}");  // 응답 메시지
             return;
         }
@@ -100,6 +105,7 @@ public class CustomLogoutFilter extends GenericFilterBean {
         if (!category.equals("refresh")) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             try (PrintWriter out = response.getWriter()) {
                 out.write("{\"message\": \"Invalid refresh token\"}");
             }
@@ -114,6 +120,7 @@ public class CustomLogoutFilter extends GenericFilterBean {
         if (storedRefreshToken == null || !storedRefreshToken.equals(refresh)) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            response.setCharacterEncoding(StandardCharsets.UTF_8.name());
             try (PrintWriter out = response.getWriter()) {
                 out.write("{\"message\": \"Refresh token not found or invalid\"}");
             }
@@ -133,6 +140,7 @@ public class CustomLogoutFilter extends GenericFilterBean {
         // 로그아웃 성공 응답 설정
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.getWriter().write("{\"message\": \"Logout successful\"}");
 
 
