@@ -1,21 +1,17 @@
 package main.gateway.filter;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import main.gateway.global.ApiResult;
+import main.gateway.global.code.status.ErrorStatus;
 import org.reactivestreams.Publisher;
-import org.springframework.cloud.gateway.filter.GlobalFilter;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
+import org.springframework.cloud.gateway.filter.*;
 import org.springframework.core.Ordered;
-import org.springframework.core.io.buffer.DataBuffer;
-import org.springframework.core.io.buffer.DataBufferFactory;
-import org.springframework.core.io.buffer.DataBufferUtils;
-import org.springframework.http.server.reactive.ServerHttpResponse;
-import org.springframework.http.server.reactive.ServerHttpResponseDecorator;
+import org.springframework.core.io.buffer.*;
+import org.springframework.http.*;
+import org.springframework.http.server.reactive.*;
 import org.springframework.stereotype.Component;
 import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
+import reactor.core.publisher.*;
 
 import java.nio.charset.StandardCharsets;
 
@@ -26,87 +22,137 @@ public class GlobalResponseWrapperFilter implements GlobalFilter, Ordered {
 
     @Override
     public Mono<Void> filter(ServerWebExchange exchange, GatewayFilterChain chain) {
-
+        // 원본 Response
         ServerHttpResponse originalResponse = exchange.getResponse();
-        DataBufferFactory bufferFactory = originalResponse.bufferFactory();
 
-        // Content-Type 헤더에 UTF-8 charset을 명시적으로 설정
-        originalResponse.getHeaders().set("Content-Type", "application/json; charset=UTF-8");
+        // Content-Type 설정 (JSON)
+        originalResponse.getHeaders().setContentType(MediaType.APPLICATION_JSON);
 
+        // ServerHttpResponseDecorator 생성
         ServerHttpResponseDecorator decoratedResponse = new ServerHttpResponseDecorator(originalResponse) {
-            @Override
-            public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
-                // 수정된 응답과 실제 바이트 수가 맞도록 Content-Length 헤더 제거
-                getDelegate().getHeaders().remove("Content-Length");
 
-                // Mono 처리
+            @Override
+            @SuppressWarnings("unchecked")
+            public Mono<Void> writeWith(Publisher<? extends DataBuffer> body) {
+                // Content-Length 제거 (바디 내용이 바뀌므로 재설정 필요)
+                getDelegate().getHeaders().remove(HttpHeaders.CONTENT_LENGTH);
+
+                // Spring Boot 3+ : getStatusCode() → HttpStatusCode
+                HttpStatusCode statusCode = getDelegate().getStatusCode();
+                if (statusCode == null) {
+                    statusCode = HttpStatus.OK; // 기본 OK
+                }
+
+                // Mono 바디인지, Flux 바디인지 구분
                 if (body instanceof Mono) {
+                    HttpStatusCode finalStatusCode1 = statusCode;
                     return ((Mono<? extends DataBuffer>) body)
                             .flatMap(dataBuffer -> {
+                                // 원본 바디 추출
                                 String originalBody = dataBuffer.toString(StandardCharsets.UTF_8);
-                                System.out.println("Mono - Original body: " + originalBody);
                                 DataBufferUtils.release(dataBuffer);
 
-                                // JSON 파싱 시도. 실패하면 원본 문자열 그대로 사용.
-                                Object resultObj;
-                                try {
-                                    resultObj = objectMapper.readValue(originalBody, Object.class);
-                                } catch (JsonProcessingException e) {
-                                    resultObj = originalBody;
-                                }
+                                // ApiResult로 감싸기
+                                ApiResult<?> apiResult = buildApiResult(originalBody, finalStatusCode1);
 
-                                ApiResult<Object> apiResult = ApiResult.onSuccess(resultObj);
+                                // JSON 직렬화
+                                String modified;
                                 try {
-                                    String modifiedBody = objectMapper.writeValueAsString(apiResult);
-                                    byte[] bytes = modifiedBody.getBytes(StandardCharsets.UTF_8);
-                                    DataBuffer newBuffer = bufferFactory.wrap(bytes);
-                                    return Mono.just(newBuffer);
-                                } catch (JsonProcessingException e) {
+                                    modified = objectMapper.writeValueAsString(apiResult);
+                                } catch (Exception e) {
                                     return Mono.error(e);
                                 }
+
+                                // 새 바디(직렬화된 문자열)를 DataBuffer로 감싸
+                                byte[] bytes = modified.getBytes(StandardCharsets.UTF_8);
+                                DataBuffer newBuffer = exchange.getResponse().bufferFactory().wrap(bytes);
+
+                                return Mono.just(newBuffer);
                             })
-                            .flatMap(buffer -> super.writeWith(Mono.just(buffer)));
-                }
-                // Flux 처리
-                else if (body instanceof Flux) {
-                    Flux<? extends DataBuffer> fluxBody = (Flux<? extends DataBuffer>) body;
-                    return super.writeWith(
-                            fluxBody.collectList().flatMap(dataBuffers -> {
-                                DataBuffer joinedBuffer = bufferFactory.join(dataBuffers);
+                            // 다시 super.writeWith(...)로 최종 응답
+                            .flatMap(buf -> super.writeWith(Mono.just(buf)));
+
+                } else if (body instanceof Flux) {
+                    HttpStatusCode finalStatusCode = statusCode;
+                    return Flux.from(body)
+                            .collectList()
+                            .flatMap(dataBuffers -> {
+                                DataBuffer joinedBuffer = exchange.getResponse().bufferFactory().join(dataBuffers);
                                 String originalBody = joinedBuffer.toString(StandardCharsets.UTF_8);
-                                System.out.println("Flux - Original body: " + originalBody);
                                 DataBufferUtils.release(joinedBuffer);
 
-                                Object resultObj;
-                                try {
-                                    resultObj = objectMapper.readValue(originalBody, Object.class);
-                                } catch (JsonProcessingException e) {
-                                    resultObj = originalBody;
-                                }
+                                ApiResult<?> apiResult = buildApiResult(originalBody, finalStatusCode);
 
-                                ApiResult<Object> apiResult = ApiResult.onSuccess(resultObj);
+                                String modified;
                                 try {
-                                    String modifiedBody = objectMapper.writeValueAsString(apiResult);
-                                    byte[] bytes = modifiedBody.getBytes(StandardCharsets.UTF_8);
-                                    DataBuffer newBuffer = bufferFactory.wrap(bytes);
-                                    return Mono.just(newBuffer);
-                                } catch (JsonProcessingException e) {
+                                    modified = objectMapper.writeValueAsString(apiResult);
+                                } catch (Exception e) {
                                     return Mono.error(e);
                                 }
-                            })
-                    );
+
+                                byte[] bytes = modified.getBytes(StandardCharsets.UTF_8);
+                                DataBuffer newBuffer = exchange.getResponse().bufferFactory().wrap(bytes);
+
+                                return super.writeWith(Mono.just(newBuffer));
+                            });
                 }
-                // 그 외의 경우 그대로 반환
+                // 그 외 그대로 통과
                 return super.writeWith(body);
             }
         };
 
+        // 수정된 response로 교체
         return chain.filter(exchange.mutate().response(decoratedResponse).build());
+    }
+
+    /**
+     * 상태코드 보고, 2xx면 onSuccess, 그 외 onFailure
+     * "originalBody" 문자열을 에러 코드로 보고 ErrorStatus 매핑
+     */
+    private ApiResult<?> buildApiResult(String originalBody, HttpStatusCode statusCode) {
+        if (statusCode.is2xxSuccessful()) {
+            // 성공
+            Object parsed;
+            try {
+                parsed = objectMapper.readValue(originalBody, Object.class);
+            } catch (Exception e) {
+                // 만약 JSON 파싱 실패하면 그냥 문자열 그대로
+                parsed = originalBody;
+            }
+            return ApiResult.onSuccess(parsed);
+        } else {
+            // 실패(4xx/5xx)
+            // originalBody를 "errorCode"라고 가정 (예: "COMMON400")
+            String errorCode = originalBody;
+
+            // errorCode를 ErrorStatus로 매핑
+            ErrorStatus matched = mapErrorStatus(errorCode);
+
+            // ApiResult.onFailure
+            return ApiResult.onFailure(
+                    matched.getCode(),
+                    matched.getMessage(),
+                    null
+            );
+        }
+    }
+
+    /**
+     * 문자열 -> ErrorStatus
+     */
+    private ErrorStatus mapErrorStatus(String code) {
+        for (ErrorStatus es : ErrorStatus.values()) {
+            if (es.getCode().equals(code)) {
+                return es;
+            }
+        }
+        // 못 찾으면 500
+        return ErrorStatus._INTERNAL_SERVER_ERROR;
     }
 
     @Override
     public int getOrder() {
-        // 다른 필터들보다 우선 적용하도록 (-3)
+        // 우선순위 조정
         return -3;
     }
 }
