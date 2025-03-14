@@ -86,6 +86,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
         // 로그인 성공 시 응답 바디에 성공 메시지 추가
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/json");
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.setHeader("Authorization", "Bearer " + access);
         response.addCookie(createCookie("refresh", refresh));
 
@@ -107,6 +108,7 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
                                               AuthenticationException failed) throws IOException {
 
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+        response.setCharacterEncoding(StandardCharsets.UTF_8.name());
         response.getWriter().write("{\"message\":\"Authentication failed\"}");
 
     }
