@@ -2,6 +2,7 @@ package main.test1.service;
 
 import main.test1.dto.UserRequestDto;
 import main.test1.entity.Role;
+import main.test1.global.exception.GeneralException;
 import main.test1.repository.UserRepository;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -27,7 +28,7 @@ public class UserServiceImpl implements UserService {
 
         boolean isexist = userRepository.existsByUsername(username);
         if (isexist) {
-            throw new IllegalArgumentException("Username already exists");
+            throw new GeneralException("_USERNAME_NOT_FOUND");
         }
 
         User new_user = User.builder()
