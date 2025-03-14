@@ -5,6 +5,7 @@ import main.test1.dto.SchoolResponseDto;
 import main.test1.dto.StudentRequestDto;
 import main.test1.dto.StudentResponseDto;
 import main.test1.entity.Student;
+import main.test1.global.exception.GeneralException;
 import main.test1.repository.StudentRepository;
 import org.springframework.stereotype.Service;
 
@@ -33,7 +34,8 @@ public class StudentServiceImpl implements StudentService {
 
     @Override
     public StudentResponseDto.StudentDto findById(Long id) {
-        Student student = studentRepository.findById(id).orElse(null);
+        Student student = studentRepository.findById(id)
+                .orElseThrow(() -> new GeneralException("_STUDENT_NOT_FOUND"));
         Long schoolId = student.getSchool_id();
         SchoolResponseDto.School school = schoolFeignClient.getSchool(schoolId);
         StudentResponseDto.StudentDto studentResponseDto = StudentResponseDto.StudentDto.builder()
