@@ -3,6 +3,7 @@ package main.test2.service;
 import main.test2.dto.SchoolRequestDto;
 import main.test2.dto.SchoolResponseDto;
 import main.test2.entity.School;
+import main.test2.global.exception.GeneralException;
 import main.test2.repository.SchoolRepository;
 import org.springframework.stereotype.Service;
 
@@ -37,5 +38,17 @@ public class SchoolServiceImpl implements SchoolService {
                 .email(school.get().getEmail())
                 .build();
         return schoolDto;
+    }
+
+    @Override
+    public void update(Long id,SchoolRequestDto.School schoolDto) {
+        School school = schoolRepository.findById(id).orElseThrow(
+                ()-> new GeneralException("_NOT_FOUND_SCHOOL")
+        );
+        school.setName(schoolDto.getName());
+        school.setEmail(schoolDto.getEmail());
+
+        schoolRepository.save(school);
+
     }
 }

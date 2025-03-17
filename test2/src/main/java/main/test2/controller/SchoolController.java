@@ -27,4 +27,11 @@ public class SchoolController {
         return schoolService.findById(id);
     }
 
+    @PutMapping("/{id}")
+    public String updateSchoolById(@PathVariable("id") Long id, @RequestBody SchoolRequestDto.School schoolDto){
+
+        schoolService.update(id, schoolDto);
+        return "update success";
+    }
+
 }
