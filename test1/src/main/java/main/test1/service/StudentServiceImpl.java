@@ -21,7 +21,7 @@ public class StudentServiceImpl implements StudentService {
     private final SchoolFeignClient schoolFeignClient;
     private final RedisTemplate<String, SchoolResponseDto.School> redisTemplate;
     public StudentServiceImpl(StudentRepository studentRepository, SchoolFeignClient schoolFeignClient,
-                              @Qualifier("schoolRedisTemplate") RedisTemplate<String, SchoolResponseDto.School> redisTemplate) {
+                              RedisTemplate<String, SchoolResponseDto.School> redisTemplate) {
         this.studentRepository = studentRepository;
         this.schoolFeignClient = schoolFeignClient;
         this.redisTemplate = redisTemplate;

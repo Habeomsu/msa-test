@@ -34,17 +34,5 @@ public class RedisConfig {
         template.setConnectionFactory(redisConnectionFactory);
         return template;
     }
-    @Bean
-    public RedisTemplate<String, SchoolResponseDto.School> schoolRedisTemplate(RedisConnectionFactory connectionFactory) {
-        RedisTemplate<String, SchoolResponseDto.School> template = new RedisTemplate<>();
-        template.setConnectionFactory(connectionFactory);
 
-        Jackson2JsonRedisSerializer<SchoolResponseDto.School> serializer =
-                new Jackson2JsonRedisSerializer<>(SchoolResponseDto.School.class);
-        template.setDefaultSerializer(serializer);
-        template.setKeySerializer(new StringRedisSerializer());
-        template.setValueSerializer(serializer);
-        template.afterPropertiesSet();
-        return template;
-    }
 }
