@@ -1,21 +1,31 @@
 package main.test2.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import main.test2.dto.SchoolRequestDto;
 import main.test2.dto.SchoolResponseDto;
 import main.test2.entity.School;
 import main.test2.global.exception.GeneralException;
 import main.test2.repository.SchoolRepository;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class SchoolServiceImpl implements SchoolService {
 
     private final SchoolRepository schoolRepository;
+    private final KafkaTemplate<String, String> kafkaTemplate;
+    private final ObjectMapper objectMapper;
 
-    public SchoolServiceImpl(SchoolRepository schoolRepository) {
+    public SchoolServiceImpl(SchoolRepository schoolRepository, KafkaTemplate<String, String> kafkaTemplate,
+                             ObjectMapper objectMapper) {
         this.schoolRepository = schoolRepository;
+        this.kafkaTemplate = kafkaTemplate;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -49,6 +59,14 @@ public class SchoolServiceImpl implements SchoolService {
         school.setEmail(schoolDto.getEmail());
 
         schoolRepository.save(school);
+
+        try {
+            String schoolJson = objectMapper.writeValueAsString(school);
+            kafkaTemplate.send("schoolUpdates", schoolJson);
+            log.info("Send school updates to kafka");
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("Error serializing school object", e);
+        }
 
     }
 }
