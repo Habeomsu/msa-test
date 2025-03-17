@@ -7,5 +7,6 @@ public interface SchoolService {
 
     public void save(SchoolRequestDto.School schoolDto);
     public SchoolResponseDto.SchoolDto findById(Long id);
+    public void update(Long id,SchoolRequestDto.School schoolDto);
 
 }
